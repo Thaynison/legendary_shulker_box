@@ -1,0 +1,7 @@
+name: legendary_shulker_box
+version: '1.0.0'
+main: www.legendarycommunity.com.br.legendary_shulker_box.Legendary_shulker_box
+api-version: '1.21'
+authors: [ Thaynison ]
+description: Plugin Legendary Community
+website: http://www.legendarycommunity.com.br
