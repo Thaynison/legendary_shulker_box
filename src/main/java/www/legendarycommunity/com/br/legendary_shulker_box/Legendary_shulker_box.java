@@ -8,8 +8,10 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -33,13 +35,11 @@ public final class Legendary_shulker_box extends JavaPlugin implements Listener 
 
     @Override
     public void onEnable() {
-        // Inicializa a chave para dados persistentes
         shulkerKey = new NamespacedKey(this, "shulker_id");
-
-        // Registra o evento no sistema
         Bukkit.getPluginManager().registerEvents(this, this);
         getLogger().info("Legendary Shulker Box habilitado com sucesso!");
     }
+
 
     @Override
     public void onDisable() {
@@ -113,24 +113,51 @@ public final class Legendary_shulker_box extends JavaPlugin implements Listener 
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        // Verifica se o inventário é uma Shulker Box
-        if (openShulkerInventories.containsKey(event.getInventory())) {
-            ItemStack currentItem = event.getCurrentItem();
+        Player player = (Player) event.getWhoClicked();
+        Inventory inventory = event.getInventory();
+        ItemStack currentItem = event.getCurrentItem();
+        ItemStack cursorItem = event.getCursor();
 
+        // Verifica se o inventário é uma Shulker Box
+        if (openShulkerInventories.containsKey(inventory)) {
+
+            // Impede que o jogador coloque uma Shulker Box dentro de outra
             if (currentItem != null && currentItem.getType().toString().endsWith("_SHULKER_BOX")) {
-                // Impede que o jogador coloque uma Shulker Box dentro de outra
                 event.setCancelled(true);
-                event.getWhoClicked().sendMessage("§cVocê não pode colocar uma Shulker Box dentro de outra!");
+                player.sendMessage("§cVocê não pode colocar uma Shulker Box dentro de outra!");
             }
 
-            // Verifica se o jogador está tentando colocar o mesmo item na Shulker Box
-            ItemStack cursorItem = event.getCursor();
-            if (cursorItem != null && cursorItem.equals(event.getWhoClicked().getInventory().getItemInMainHand())) {
+            // Impede o arraste (drag) de itens da Shulker Box para fora dela
+            // Detecta quando o jogador tenta arrastar (click + move de itens)
+            if (event.getSlot() == -999 || event.getClick().isShiftClick() || cursorItem != null) {
                 event.setCancelled(true);
-                event.getWhoClicked().sendMessage("§cVocê não pode colocar a própria Shulker Box dentro dela mesma!");
+                player.sendMessage("§cVocê não pode mover itens para fora da Shulker Box!");
+            }
+
+            // Bloqueia o drop de itens diretamente da Shulker Box para o chão
+            if (event.getClick().isRightClick() || event.getClick().isShiftClick() || event.getClick().isMouseClick()) {
+                event.setCancelled(true);
+                player.sendMessage("§cVocê não pode dropar itens da Shulker Box!");
             }
         }
     }
+
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = event.getItemDrop().getItemStack();
+
+        // Verifica se o item sendo droppado é uma Shulker Box ou está dentro de uma Shulker Box
+        if (item != null && item.getType().toString().endsWith("_SHULKER_BOX")) {
+            event.setCancelled(true); // Bloqueia o drop do item
+            player.sendMessage("§cVocê não pode dropar itens da Shulker Box!");
+        }
+    }
+
+
+
+
+
 
     private String getOrCreateShulkerId(ItemStack shulkerBox) {
         ItemMeta meta = shulkerBox.getItemMeta();
